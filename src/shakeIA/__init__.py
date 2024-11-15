@@ -1,3 +1,6 @@
+from .example import ex
 
-def test():
+from typing import Any
+
+def test(bop: str) -> None:
     print("test")
