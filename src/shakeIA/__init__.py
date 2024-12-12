@@ -1,4 +1,4 @@
 from .model import ShakeModel
-from .dataset import CharacterDataset
+from .dataset import CharacterDataset, ALPHABET
 
-__ALL__ = [ShakeModel, CharacterDataset]
+__ALL__ = [ShakeModel, CharacterDataset, ALPHABET]
