@@ -11,14 +11,16 @@ STOI = {c: i for i, c in enumerate(ALPHABET)}
 ITOS = {i: c for i, c in enumerate(ALPHABET)}
 
 
-class CharacterDataset(IterableDataset):
+class CharacterDataset(IterableDataset[torch.Tensor]):
 
-    def __init__(self, data: str):
+    def __init__(self, data: str, vector_len: int = 4):
         """data: str
-        The full dataset"""
+        The full dataset
+        """
         super().__init__()
         self.data = data
         self.idata_stream = [STOI[c] for c in data]
+        self.vector_len = vector_len
 
     def get_vocab_size(self) -> int:
         return len(ALPHABET)
@@ -34,14 +36,15 @@ class CharacterDataset(IterableDataset):
             end = start + per_worker
 
         G = (
-            torch.tensor(
-                [
-                    self.idata_stream[i],
-                    self.idata_stream[i + 1],
-                    self.idata_stream[i + 2],
-                    self.idata_stream[i + 3],
-                ],
-                dtype=torch.int16
+            (
+                torch.tensor(
+                    [self.idata_stream[i + j] for j in range(self.vector_len)],
+                ),
+                torch.tensor(
+                    [
+                        self.idata_stream[i + self.vector_len],
+                    ]
+                ),
             )
             for i in range(start, end)
         )
