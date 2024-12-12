@@ -1,6 +1,3 @@
-from .example import ex
+from .model import ShakeModel
 
-from typing import Any
-
-def test(bop: str) -> None:
-    print("test")
+__ALL__ = [ShakeModel]
