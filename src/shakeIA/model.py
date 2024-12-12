@@ -62,7 +62,7 @@ class ShakeModel(torch.nn.Module):
         # Tranformation block
         self.blocks = torch.nn.ModuleList(
             TransformationBlock(device, embedding_dim, head_num, forward_expansion)
-            for _ in block_number
+            for _ in range(block_number)
         )
 
         # Normalisation
