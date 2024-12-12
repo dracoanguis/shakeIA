@@ -73,19 +73,10 @@ class ShakeModel(torch.nn.Module):
 
         # Tranformation block
         self.blocks = torch.nn.ModuleList(
-<<<<<<< Updated upstream
-            TransformationBlock(device, embedding_dim, head_num, forward_expansion)
-<<<<<<< HEAD
-            for _ in block_number
-=======
             [
                 TransformationBlock(device, embedding_dim, head_num, forward_expansion)
                 for _ in range(block_number)
             ]
->>>>>>> Stashed changes
-=======
-            for _ in range(block_number)
->>>>>>> refs/remotes/github/feature-model
         )
 
         # Normalisation
