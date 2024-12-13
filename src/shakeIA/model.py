@@ -13,7 +13,7 @@ class TransformationBlock(torch.nn.Module):
         device: torch.device,
         embedding_dim: int,
         head_num: int,
-        forward_expansion: int,
+        forward_expansion: int
     ):
         super().__init__()
 
@@ -36,9 +36,13 @@ class TransformationBlock(torch.nn.Module):
         self.normalisation1 = torch.nn.LayerNorm(embedding_dim, device=device)
         self.normalisation2 = torch.nn.LayerNorm(embedding_dim, device=device)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, vector_len: int) -> torch.Tensor:
         x = self.normalisation1(x)
-        x = self.multi_head(x, x, x, need_weights=False)[0] + x
+
+        causal_mask = torch.triu(torch.ones(vector_len, vector_len), diagonal=1).to(x.device)
+        causal_mask = causal_mask.masked_fill(causal_mask == 1, float('-inf'))
+
+        x = self.multi_head(x, x, x, need_weights=False, attn_mask=causal_mask)[0] + x
 
         x = self.normalisation2(x)
         x = self.feed_forward(x) + x
@@ -89,7 +93,7 @@ class ShakeModel(torch.nn.Module):
         x = self.embedding(x) + self.embedding(torch.arange(0, self.vector_len))
 
         for block in self.blocks:
-            x = block(x)
+            x = block(x, self.vector_len)
 
         x = self.Final_LayerNorm(x)
         x = x[:, -1, :]
