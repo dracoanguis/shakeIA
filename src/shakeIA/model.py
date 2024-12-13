@@ -5,6 +5,28 @@ import torch.nn
 
 from shakeIA import ALPHABET
 
+from typing import TypedDict
+from typing_extensions import ReadOnly
+
+ModelConfig = TypedDict(
+    "ModelConfig",
+    {
+        "vector_len": ReadOnly[int],
+        "embedding_dim": ReadOnly[int],
+        "head_num": ReadOnly[int],
+        "forward_expansion": ReadOnly[int],
+        "block_number": ReadOnly[int],
+    },
+)
+
+default_config: ModelConfig = {
+    "vector_len": 4,
+    "embedding_dim": 4,
+    "head_num": 4,
+    "forward_expansion": 6,
+    "block_number": 2,
+}
+
 
 class TransformationBlock(torch.nn.Module):
 
@@ -13,7 +35,7 @@ class TransformationBlock(torch.nn.Module):
         device: torch.device,
         embedding_dim: int,
         head_num: int,
-        forward_expansion: int
+        forward_expansion: int,
     ):
         super().__init__()
 
@@ -39,8 +61,10 @@ class TransformationBlock(torch.nn.Module):
     def forward(self, x: torch.Tensor, vector_len: int) -> torch.Tensor:
         x = self.normalisation1(x)
 
-        causal_mask = torch.triu(torch.ones(vector_len, vector_len), diagonal=1).to(x.device)
-        causal_mask = causal_mask.masked_fill(causal_mask == 1, float('-inf'))
+        causal_mask = torch.triu(torch.ones(vector_len, vector_len), diagonal=1).to(
+            x.device
+        )
+        causal_mask = causal_mask.masked_fill(causal_mask == 1, float("-inf"))
 
         x = self.multi_head(x, x, x, need_weights=False, attn_mask=causal_mask)[0] + x
 
@@ -54,46 +78,44 @@ class ShakeModel(torch.nn.Module):
     def __init__(
         self,
         device: torch.device,
-        vector_len: int = 4,
-        embedding_dim: int = 4,
-        head_num: int = 4,
-        forward_expansion: int = 3,
-        block_number: int = 1,
+        config: ModelConfig,
     ):
         super().__init__()
-
-        self.config = {
-            "vector_len": vector_len,
-            "embedding_dim": embedding_dim,
-            "head_num": head_num,
-            "forward_expansion": forward_expansion,
-            "block_number": block_number,
-        }
-
-        self.vector_len = vector_len
+        self.config = config
 
         # Embedding layer
-        self.embedding = torch.nn.Embedding(len(ALPHABET), embedding_dim, device=device)
+        self.embedding = torch.nn.Embedding(
+            len(ALPHABET), self.config["embedding_dim"], device=device
+        )
 
         # Tranformation block
         self.blocks = torch.nn.ModuleList(
             [
-                TransformationBlock(device, embedding_dim, head_num, forward_expansion)
-                for _ in range(block_number)
+                TransformationBlock(
+                    device,
+                    self.config["embedding_dim"],
+                    self.config["head_num"],
+                    self.config["forward_expansion"],
+                )
+                for _ in range(self.config["block_number"])
             ]
         )
 
         # Normalisation
-        self.Final_LayerNorm = torch.nn.LayerNorm(embedding_dim, device=device)
+        self.Final_LayerNorm = torch.nn.LayerNorm(
+            self.config["embedding_dim"], device=device
+        )
 
         # Getting back the output
-        self.linear = torch.nn.Linear(embedding_dim, len(ALPHABET))
+        self.linear = torch.nn.Linear(self.config["embedding_dim"], len(ALPHABET))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.embedding(x) + self.embedding(torch.arange(0, self.vector_len))
+        x = self.embedding(x) + self.embedding(
+            torch.arange(0, self.config["vector_len"])
+        )
 
         for block in self.blocks:
-            x = block(x, self.vector_len)
+            x = block(x, self.config["vector_len"])
 
         x = self.Final_LayerNorm(x)
         x = x[:, -1, :]
