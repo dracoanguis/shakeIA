@@ -10,9 +10,9 @@ We started by preparing our data, by splitting the text on every characters, and
 
 ### Data vectors
 
-We decided to use overlaping character vectors of a mean word size of 4 (exactly 4,79 using Norvig 2009 study on google words dataset).
+We decided to use overlaping character vectors of a mean word size of 4 by default (exactly 4,79 using Norvig 2009 study on google words dataset), but this parameter can be changed as required.
 
-The vector contains the index of the letter in a corresponding alphabet table composed of alpha_numeric characters, punction and whitespaces (in our case we decided to ignore `\r` as a whitespace), totaling to 95 chars from 0 to 94.
+The vector contains the index of the letter in a corresponding alphabet table composed of alpha_numeric characters, punction and whitespaces, totaling to 100 chars from 0 to 99.
 
 ### Dataset splitting
 
