@@ -3,7 +3,7 @@
 import torch
 import torch.nn
 
-from shakeIA import ALPHABET
+from .dataset import ALPHABET
 
 from typing import TypedDict
 from typing_extensions import ReadOnly
@@ -21,8 +21,8 @@ ModelConfig = TypedDict(
 
 default_config: ModelConfig = {
     "vector_len": 4,
-    "embedding_dim": 4,
-    "head_num": 4,
+    "embedding_dim": 12,
+    "head_num": 3,
     "forward_expansion": 6,
     "block_number": 2,
 }
@@ -61,10 +61,11 @@ class TransformationBlock(torch.nn.Module):
     def forward(self, x: torch.Tensor, vector_len: int) -> torch.Tensor:
         x = self.normalisation1(x)
 
-        causal_mask = torch.triu(torch.ones(vector_len, vector_len), diagonal=1).to(
-            x.device
-        )
-        causal_mask = causal_mask.masked_fill(causal_mask == 1, float("-inf"))
+        # causal_mask = torch.triu(torch.ones(vector_len, vector_len), diagonal=1).to(
+        # x.device
+        # )
+        # causal_mask = causal_mask.masked_fill(causal_mask == 1, float("-inf"))
+        causal_mask = None
 
         x = self.multi_head(x, x, x, need_weights=False, attn_mask=causal_mask)[0] + x
 
@@ -81,6 +82,7 @@ class ShakeModel(torch.nn.Module):
         config: ModelConfig,
     ):
         super().__init__()
+        self.device = device
         self.config = config
 
         # Embedding layer
@@ -107,11 +109,13 @@ class ShakeModel(torch.nn.Module):
         )
 
         # Getting back the output
-        self.linear = torch.nn.Linear(self.config["embedding_dim"], len(ALPHABET))
+        self.linear = torch.nn.Linear(
+            self.config["embedding_dim"], len(ALPHABET), device=device
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.embedding(x) + self.embedding(
-            torch.arange(0, self.config["vector_len"])
+            torch.arange(self.config["vector_len"]).to(self.device)
         )
 
         for block in self.blocks:

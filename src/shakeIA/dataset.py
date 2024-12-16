@@ -29,13 +29,13 @@ class CharacterDataset(IterableDataset[torch.Tensor]):
         work_info = torch.utils.data.get_worker_info()
         if work_info is None:
             start = 0
-            end = len(self.data) - 3
+            end = len(self.data) - self.vector_len
         else:
-            per_worker = (len(self.data) - 3) // work_info.num_workers
+            per_worker = (len(self.data) - self.vector_len) // work_info.num_workers
             start = work_info.id * per_worker
             end = start + per_worker
 
-        G = (
+        return (
             (
                 torch.tensor(
                     [self.idata_stream[i + j] for j in range(self.vector_len)],
@@ -48,5 +48,3 @@ class CharacterDataset(IterableDataset[torch.Tensor]):
             )
             for i in range(start, end)
         )
-
-        return G
