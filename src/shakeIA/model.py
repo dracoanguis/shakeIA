@@ -29,7 +29,22 @@ default_config: ModelConfig = {
 
 
 class TransformationBlock(torch.nn.Module):
+    """
+    A Transformer-based module that performs multi-head self-attention and feed-forward operations 
+    with layer normalization and residual connections.
 
+    Attributes:
+        multi_head (torch.nn.MultiheadAttention): Multi-head self-attention module.
+        feed_forward (torch.nn.Sequential): Feed-forward neural network with a hidden layer 
+                                             expanded by `forward_expansion`.
+        normalisation1 (torch.nn.LayerNorm): Layer normalization applied before the attention module.
+        normalisation2 (torch.nn.LayerNorm): Layer normalization applied before the feed-forward module.
+
+    Methods:
+        forward(x: torch.Tensor, vector_len: int) -> torch.Tensor:
+            Computes the forward pass of the transformation block, including multi-head self-attention, 
+            a causal mask for autoregressive behavior, and feed-forward operations.
+    """
     def __init__(
         self,
         device: torch.device,
@@ -74,7 +89,30 @@ class TransformationBlock(torch.nn.Module):
 
 
 class ShakeModel(torch.nn.Module):
+    """
+    A Transformer-based sequence model designed for autoregressive tasks over a predefined 
+    vocabulary. It employs embedding layers, multiple transformation blocks, and a final 
+    linear layer to generate predictions.
 
+    Attributes:
+        config (dict): Configuration of the model parameters, including:
+            - vector_len (int): Input sequence length.
+            - embedding_dim (int): Dimension of the embedding space.
+            - head_num (int): Number of attention heads in the transformer block.
+            - forward_expansion (int): Expansion factor for the hidden layer in the feed-forward module.
+            - block_number (int): Number of transformation blocks in the model.
+        vector_len (int): Length of the input sequence.
+        embedding (torch.nn.Embedding): Embedding layer for converting tokens to vector representations.
+        blocks (torch.nn.ModuleList): List of `TransformationBlock` modules.
+        Final_LayerNorm (torch.nn.LayerNorm): Final layer normalization applied before output.
+        linear (torch.nn.Linear): Linear layer mapping the embedding space to the output vocabulary.
+
+    Methods:
+        forward(x: torch.Tensor) -> torch.Tensor:
+            Processes the input tensor through embedding, transformation blocks, and a final 
+            linear layer to generate logits over the vocabulary.
+
+    """
     def __init__(
         self,
         device: torch.device,
