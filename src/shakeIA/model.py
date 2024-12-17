@@ -3,10 +3,12 @@
 import torch
 import torch.nn
 
-from .dataset import ALPHABET
+from .dataset import ALPHABET, STOI, ITOS
 
 from typing import TypedDict
 from typing_extensions import ReadOnly
+
+from functools import reduce
 
 ModelConfig = TypedDict(
     "ModelConfig",
@@ -30,21 +32,22 @@ default_config: ModelConfig = {
 
 class TransformationBlock(torch.nn.Module):
     """
-    A Transformer-based module that performs multi-head self-attention and feed-forward operations 
+    A Transformer-based module that performs multi-head self-attention and feed-forward operations
     with layer normalization and residual connections.
 
     Attributes:
         multi_head (torch.nn.MultiheadAttention): Multi-head self-attention module.
-        feed_forward (torch.nn.Sequential): Feed-forward neural network with a hidden layer 
+        feed_forward (torch.nn.Sequential): Feed-forward neural network with a hidden layer
                                              expanded by `forward_expansion`.
         normalisation1 (torch.nn.LayerNorm): Layer normalization applied before the attention module.
         normalisation2 (torch.nn.LayerNorm): Layer normalization applied before the feed-forward module.
 
     Methods:
         forward(x: torch.Tensor, vector_len: int) -> torch.Tensor:
-            Computes the forward pass of the transformation block, including multi-head self-attention, 
+            Computes the forward pass of the transformation block, including multi-head self-attention,
             a causal mask for autoregressive behavior, and feed-forward operations.
     """
+
     def __init__(
         self,
         device: torch.device,
@@ -91,8 +94,8 @@ class TransformationBlock(torch.nn.Module):
 
 class ShakeModel(torch.nn.Module):
     """
-    A Transformer-based sequence model designed for autoregressive tasks over a predefined 
-    vocabulary. It employs embedding layers, multiple transformation blocks, and a final 
+    A Transformer-based sequence model designed for autoregressive tasks over a predefined
+    vocabulary. It employs embedding layers, multiple transformation blocks, and a final
     linear layer to generate predictions.
 
     Attributes:
@@ -110,10 +113,11 @@ class ShakeModel(torch.nn.Module):
 
     Methods:
         forward(x: torch.Tensor) -> torch.Tensor:
-            Processes the input tensor through embedding, transformation blocks, and a final 
+            Processes the input tensor through embedding, transformation blocks, and a final
             linear layer to generate logits over the vocabulary.
 
     """
+
     def __init__(
         self,
         device: torch.device,
@@ -163,3 +167,21 @@ class ShakeModel(torch.nn.Module):
         x = x[:, -1, :]
         x = self.linear(x)
         return x
+
+
+def prompt(
+    device: torch.device, prompt: str, model: ShakeModel, target_len: int = 400
+) -> str:
+    iprompt = [STOI[c] for c in prompt]
+
+    p_vec = torch.tensor([iprompt[-model.config["vector_len"] :]]).to(device)
+    res: list[int] = iprompt[-model.config["vector_len"] :]
+
+    for j in range(model.config["vector_len"], target_len):
+        with torch.no_grad():
+            letter = torch.argmax(model(p_vec))
+        res += [letter.item()]
+        p_vec = torch.tensor([res[j - model.config["vector_len"] + 1 :]]).to(device)
+
+    res_str = reduce(str.__add__, [ITOS[i] for i in res])
+    return res_str

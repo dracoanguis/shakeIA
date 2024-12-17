@@ -8,7 +8,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from shakeIA.model import ShakeModel, ModelConfig, default_config
-from shakeIA.dataset import CharacterDataset
+from shakeIA.dataset import CharacterDataset, CharacterDatasetV2
 
 from functools import reduce
 
@@ -31,15 +31,16 @@ MetaConfig = TypedDict(
 
 def train_full(
     config: MetaConfig,
-    data_set: CharacterDataset,
+    data_set: CharacterDataset | CharacterDatasetV2,
     model_config: ModelConfig,
+    shuffle_dataset: bool = False,
     model_name: Optional[str] = None,
     save_folder: Optional[Path] = None,
     save_frequency: Optional[int] = None,  # epoch diviser at witch we save
 ) -> tuple[ShakeModel, list[float]]:
 
     if save_frequency <= 0:
-        raise ValueError("Modulo opération needs at least a striclty positive integer")
+        raise ValueError("Modulo operation needs at least a striclty positive integer")
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -47,9 +48,19 @@ def train_full(
     criterion = nn.CrossEntropyLoss().to(device)
     lr = config["learning_rate"]
 
-    data_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] = DataLoader(
-        data_set, config["batch_size"]
-    )
+    if not shuffle_dataset:
+        data_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] = DataLoader(
+            data_set, config["batch_size"], pin_memory=True, pin_memory_device="cuda"
+        )
+    else:
+        data_loader: DataLoader[tuple[torch.Tensor, torch.Tensor]] = DataLoader(
+            data_set,
+            config["batch_size"],
+            shuffle=True,
+            pin_memory=True,
+            pin_memory_device="cuda",
+        )
+
     model = ShakeModel(device, model_config)
 
     match config["optimizer"]:
